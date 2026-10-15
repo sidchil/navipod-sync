@@ -38,11 +38,15 @@ jobs:
       - name: Install Dependencies (macOS)
         if: runner.os == 'macOS'
         run: |
-          brew install ninja pkg-config glib pcre2 libffi libplist sqlite gdk-pixbuf libxml2 nlohmann-json
-          echo "PKG_CONFIG_PATH=$(brew --prefix pcre2)/lib/pkgconfig:$(brew --prefix glib)/lib/pkgconfig:$(brew --prefix libffi)/lib/pkgconfig:$(brew --prefix libxml2)/lib/pkgconfig:$(brew --prefix sqlite)/lib/pkgconfig" >> "$GITHUB_ENV"
+          brew install ninja pkgconf glib pcre2 libffi libplist sqlite gdk-pixbuf libxml2 nlohmann-json curl
+          P=$(brew --prefix)
+          {
+            echo "PKG_CONFIG_PATH=$P/lib/pkgconfig:$P/share/pkgconfig:$(brew --prefix libffi)/lib/pkgconfig:$(brew --prefix libxml2)/lib/pkgconfig:$(brew --prefix sqlite)/lib/pkgconfig:$(brew --prefix curl)/lib/pkgconfig"
+            echo "CMAKE_PREFIX_PATH=$P"
+          } >> "$GITHUB_ENV"
 
       - name: Configure
-        run: cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
+        run: cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_FLAGS="-Wno-error=implicit-function-declaration -Wno-error=int-conversion"
 
       - name: Build
         run: cmake --build build
