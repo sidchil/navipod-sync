@@ -1,0 +1,3 @@
+[submodule "extern/libgpod-ng"]
+	path = extern/libgpod-ng
+	url = https://github.com/sidchil/libgpod-ng

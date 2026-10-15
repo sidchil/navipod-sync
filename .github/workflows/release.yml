@@ -1,0 +1,86 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build:
+    name: Build (${{ matrix.name }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            name: linux-x86_64
+          - os: ubuntu-24.04-arm
+            name: linux-arm64
+          - os: macos-14
+            name: macos-arm64
+          - os: macos-15-intel
+            name: macos-x86_64
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install Dependencies (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake ninja-build pkg-config python3 libglib2.0-dev libplist-dev \
+            libsqlite3-dev libgdk-pixbuf-2.0-dev libxml2-dev zlib1g-dev libcurl4-openssl-dev nlohmann-json3-dev
+
+      - name: Install Dependencies (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          brew install ninja pkg-config glib pcre2 libffi libplist sqlite gdk-pixbuf libxml2 nlohmann-json
+          echo "PKG_CONFIG_PATH=$(brew --prefix pcre2)/lib/pkgconfig:$(brew --prefix glib)/lib/pkgconfig:$(brew --prefix libffi)/lib/pkgconfig:$(brew --prefix libxml2)/lib/pkgconfig:$(brew --prefix sqlite)/lib/pkgconfig" >> "$GITHUB_ENV"
+
+      - name: Configure
+        run: cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build
+        run: cmake --build build
+
+      - name: Test
+        run: ctest --test-dir build --output-on-failure
+
+      - name: Stage Installation Files
+        run: |
+          cmake --install build --prefix ./install-pkg
+          rm -rf install-pkg/include install-pkg/lib/cmake install-pkg/lib/pkgconfig
+
+      - name: Package Artifact
+        run: |
+          mkdir -p dist
+          tar -czf dist/navipod-sync-${{ github.ref_name }}-${{ matrix.name }}.tar.gz -C install-pkg .
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: navipod-sync-${{ matrix.name }}
+          path: dist/*.tar.gz
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download All Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+
+      - name: Create GitHub Release & Upload Assets
+        uses: softprops/action-gh-release@v2
+        with:
+          files: artifacts/*
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
