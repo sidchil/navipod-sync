@@ -15,7 +15,7 @@ cd navipod-sync
 Dependencies:
 
 ```sh
-# Debian / Ubuntu
+# Debian/Ubuntu
 sudo apt install cmake ninja-build pkg-config g++ python3 libglib2.0-dev libplist-dev libsqlite3-dev \
                  libgdk-pixbuf-2.0-dev libxml2-dev zlib1g-dev libcurl4-openssl-dev nlohmann-json3-dev
 # Arch Linux
